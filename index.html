@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Racer: Garage & Shop</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        :root {
+            --primary: #00f2ff;
+            --secondary: #ff0055;
+            --bg: #0f0f1a;
+            --panel: #1a1a2e;
+            --text: #ffffff;
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            font-family: 'Orbitron', sans-serif;
+            color: var(--text);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* --- UI SCREENS --- */
+        .screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(15, 15, 26, 0.95);
+            z-index: 100;
+            transition: opacity 0.3s;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 { font-size: 3rem; text-shadow: 0 0 20px var(--primary); margin-bottom: 10px; text-align: center;}
+        h2 { color: var(--primary); margin-bottom: 20px; }
+        p { font-size: 1.2rem; color: #aaa; }
+
+        .btn {
+            background: linear-gradient(45deg, var(--secondary), #ff5e00);
+            border: none;
+            padding: 15px 40px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px var(--secondary);
+            transition: transform 0.2s;
+            text-transform: uppercase;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn:active { transform: scale(0.95); }
+        .btn-secondary { background: linear-gradient(45deg, #444, #666); box-shadow: none; }
+
+        /* --- HUD --- */
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 50;
+            pointer-events: none;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--primary);
+            font-size: 1.2rem;
+        }
+
+        /* --- GAME AREA --- */
+        .gameArea {
+            width: 400px;
+            height: 100vh;
+            background: #16161d;
+            position: relative;
+            overflow: hidden;
+            border-left: 5px solid var(--primary);
+            border-right: 5px solid var(--primary);
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.2);
+        }
+
+        .line {
+            width: 10px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.3);
+            position: absolute;
+            left: 195px;
+        }
+
+        /* --- CAR DESIGN --- */
+        .car, .enemy {
+            width: 50px;
+            height: 90px;
+            position: absolute;
+            border-radius: 10px 10px 5px 5px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            z-index: 10;
+            transition: background 0.3s;
+        }
+
+        /* Современный дизайн кузова через CSS */
+        .car-body {
+            width: 100%; height: 100%;
+            position: relative;
+            border-radius: 10px 10px 5px 5px;
+            overflow: hidden;
+        }
+        /* Стекло */
+        .car-body::after {
+            content: ''; position: absolute;
+            top: 20%; left: 10%; width: 80%; height: 25%;
+            background: rgba(0,0,0,0.6);
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        /* Фары */
+        .car-lights {
+            position: absolute; top: 5px; left: 5px;
+            width: 10px; height: 5px;
+            background: #ffeb3b;
+            box-shadow: 30px 0 0 #ffeb3b, 0 0 10px #ffeb3b;
+            border-radius: 2px;
+        }
+        /* Задние фонари */
+        .car-tail {
+            position: absolute; bottom: 5px; left: 5px;
+            width: 10px; height: 5px;
+            background: #ff0000;
+            box-shadow: 30px 0 0 #ff0000, 0 0 5px #ff0000;
+            border-radius: 2px;
+        }
+
+        /* --- GARAGE / SHOP --- */
+        .garage-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 800px;
+        }
+        .car-card {
+            background: var(--panel);
+            border: 2px solid #333;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            width: 150px;
+            transition: 0.3s;
+        }
+        .car-card:hover { border-color: var(--primary); transform: translateY(-5px); }
+        .car-card.selected { border-color: var(--secondary); box-shadow: 0 0 20px var(--secondary); }
+        .car-card.locked { opacity: 0.6; }
+        
+        .preview-car {
+            width: 50px; height: 90px;
+            margin: 0 auto 10px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .stats-info { font-size: 0.9rem; color: #888; margin-top: 5px; }
+        .price-tag { color: #ffd700; font-weight: bold; }
+
+        /* Pause Menu Overlay */
+        .pause-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            backdrop-filter: blur(5px);
+        }
+
+    </style>
+</head>
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#00f2ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Neon Racer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- Иконки для iOS -->
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+<body>
+
+    <!-- HUD (Интерфейс во время игры) -->
+    <div class="hud hidden" id="gameHUD">
+        <div class="stat-box">Счет: <span id="scoreVal">0</span></div>
+        <div class="stat-box">Уровень: <span id="levelVal">1</span></div>
+        <div class="stat-box" style="color: #ffd700">💰 <span id="moneyVal">0</span></div>
+    </div>
+
+    <!-- Игровое поле -->
+    <div class="gameArea" id="gameArea"></div>
+
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div class="screen" id="mainMenu">
+        <h1>NEON RACER</h1>
+        <p>Управление: Стрелки ⬅️ ➡️ | Пауза: P</p>
+        <button class="btn" onclick="goToGarage()">Гараж</button>
+        <button class="btn" onclick="startGame()">Играть</button>
+    </div>
+
+    <!-- ГАРАЖ / МАГАЗИН -->
+    <div class="screen hidden" id="garageScreen">
+        <h2>ГАРАЖ</h2>
+        <div class="stat-box" style="margin-bottom: 20px; color: #ffd700">Баланс: <span id="garageMoney">0</span> 💰</div>
+        
+        <div class="garage-container" id="carList">
+            <!-- Машины генерируются через JS -->
+        </div>
+
+        <button class="btn btn-secondary" onclick="showScreen('mainMenu')">Назад</button>
+    </div>
+
+    <!-- МЕНЮ ПАУЗЫ -->
+    <div class="pause-overlay hidden" id="pauseMenu">
+        <h2>ПАУЗА</h2>
+        <button class="btn" onclick="togglePause()">Продолжить</button>
+        <button class="btn btn-secondary" onclick="quitGame()">В главное меню</button>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="screen hidden" id="gameOverScreen">
+        <h1 style="color: var(--secondary)">АВАРИЯ!</h1>
+        <p>Счет: <span id="finalScore">0</span></p>
+        <p>Заработано: <span id="earnedMoney">0</span> 💰</p>
+        <button class="btn" onclick="startGame()">Заново</button>
+        <button class="btn btn-secondary" onclick="quitGame()">Меню</button>
+    </div>
+
+    <script>
+        // --- КОНФИГУРАЦИЯ И ДАННЫЕ ---
+        const carsData = [
+            { id: 0, name: "Старт", price: 0, color: "#3498db", speed: 0, owned: true },
+            { id: 1, name: "Спайдер", price: 500, color: "#e74c3c", speed: 1, owned: false },
+            { id: 2, name: "Тень", price: 1000, color: "#2c3e50", speed: 2, owned: false },
+            { id: 3, name: "Золото", price: 2500, color: "#f1c40f", speed: 3, owned: false },
+            { id: 4, name: "Неон", price: 5000, color: "#00f2ff", speed: 4, owned: false }
+        ];
+
+        let gameState = {
+            money: 0,
+            selectedCarId: 0,
+            isPlaying: false,
+            isPaused: false,
+            score: 0,
+            level: 1,
+            speed: 5
+        };
+
+        let animationId = null;
+        let keys = { 
+            ArrowLeft: false, 
+            ArrowRight: false,
+            ArrowUp: false,
+            ArrowDown: false 
+        };
+        let player = { x: 0, y: 0 };
+        let enemies = [];
+        let lines = [];
+
+        // --- ИНИЦИАЛИЗАЦИЯ ---
+        window.onload = () => {
+            loadProgress();
+            updateGarageUI();
+            
+            // Обработчики клавиш
+            document.addEventListener('keydown', (e) => {
+                if (keys.hasOwnProperty(e.code)) {
+                    keys[e.code] = true;
+                }
+                if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                    togglePause();
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                if (keys.hasOwnProperty(e.code)) {
+                    keys[e.code] = false;
+                }
+            });
+        };
+
+        function loadProgress() {
+            const saved = localStorage.getItem('neonRacerSave');
+            if (saved) {
+                const data = JSON.parse(saved);
+                gameState.money = data.money || 0;
+                gameState.selectedCarId = data.selectedCarId || 0;
+                // Восстанавливаем купленные машины
+                if (data.ownedCars) {
+                    data.ownedCars.forEach(id => {
+                        const car = carsData.find(c => c.id === id);
+                        if (car) car.owned = true;
+                    });
+                }
+            }
+            updateMoneyUI();
+        }
+
+        function saveProgress() {
+            const ownedIds = carsData.filter(c => c.owned).map(c => c.id);
+            const data = {
+                money: gameState.money,
+                selectedCarId: gameState.selectedCarId,
+                ownedCars: ownedIds
+            };
+            localStorage.setItem('neonRacerSave', JSON.stringify(data));
+        }
+
+        // --- НАВИГАЦИЯ ПО ЭКРАНАМ ---
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            if (id) {
+                document.getElementById(id).classList.remove('hidden');
+            }
+            
+            const hud = document.getElementById('gameHUD');
+            if (id === 'gameOverScreen' || id === 'mainMenu' || id === 'garageScreen') {
+                hud.classList.add('hidden');
+            }
+        }
+
+        function goToGarage() {
+            updateGarageUI();
+            showScreen('garageScreen');
+        }
+
+        function quitGame() {
+            cancelAnimationFrame(animationId);
+            gameState.isPlaying = false;
+            gameState.isPaused = false;
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('gameArea').innerHTML = '';
+            showScreen('mainMenu');
+        }
+
+        // --- МАГАЗИН ---
+        function updateGarageUI() {
+            document.getElementById('garageMoney').innerText = gameState.money;
+            const list = document.getElementById('carList');
+            list.innerHTML = '';
+
+            carsData.forEach(car => {
+                const div = document.createElement('div');
+                div.className = `car-card ${car.id === gameState.selectedCarId ? 'selected' : ''} ${!car.owned ? 'locked' : ''}`;
+                div.onclick = () => selectOrBuyCar(car.id);
+                
+                div.innerHTML = `
+                    <div class="preview-car" style="background: ${car.color}">
+                        <div class="car-lights"></div><div class="car-tail"></div>
+                    </div>
+                    <div style="font-weight:bold">${car.name}</div>
+                    ${car.owned 
+                        ? `<div class="stats-info">Выбрано</div>` 
+                        : `<div class="price-tag">${car.price} 💰</div>`
+                    }
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function selectOrBuyCar(id) {
+            const car = carsData.find(c => c.id === id);
+            if (car.owned) {
+                gameState.selectedCarId = id;
+                saveProgress();
+                updateGarageUI();
+            } else {
+                if (gameState.money >= car.price) {
+                    gameState.money -= car.price;
+                    car.owned = true;
+                    gameState.selectedCarId = id;
+                    saveProgress();
+                    updateGarageUI();
+                    updateMoneyUI();
+                } else {
+                    alert("Недостаточно денег!");
+                }
+            }
+        }
+
+        function updateMoneyUI() {
+            const moneyEl = document.getElementById('moneyVal');
+            if (moneyEl) {
+                moneyEl.innerText = gameState.money;
+            }
+        }
+
+        // --- ИГРОВАЯ ЛОГИКА ---
+        function startGame() {
+            const area = document.getElementById('gameArea');
+            area.innerHTML = '';
+            enemies = [];
+            lines = [];
+            
+            gameState.score = 0;
+            gameState.level = 1;
+            gameState.speed = 5 + (carsData[gameState.selectedCarId].speed || 0);
+            gameState.isPlaying = true;
+            gameState.isPaused = false;
+
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('gameHUD').classList.remove('hidden');
+            showScreen(''); // Скрыть все меню
+
+            // Создаем дорогу
+            for (let i = 0; i < 6; i++) {
+                let line = document.createElement('div');
+                line.className = 'line';
+                line.y = i * 150;
+                line.style.top = line.y + 'px';
+                area.appendChild(line);
+                lines.push(line);
+            }
+
+            // Создаем игрока
+            const carData = carsData[gameState.selectedCarId];
+            let car = document.createElement('div');
+            car.className = 'car';
+            car.innerHTML = `<div class="car-body" style="background:${carData.color}"><div class="car-lights"></div><div class="car-tail"></div></div>`;
+            car.style.left = '175px';
+            car.style.bottom = '100px';
+            area.appendChild(car);
+
+            player.x = car.offsetLeft;
+            player.y = car.offsetTop;
+            player.element = car;
+
+            // Создаем врагов
+            for (let i = 0; i < 3; i++) {
+                createEnemy(i * 300);
+            }
+
+            updateHUD();
+            gamePlay();
+        }
+
+        function createEnemy(offsetY = -300) {
+            const area = document.getElementById('gameArea');
+            let enemy = document.createElement('div');
+            enemy.className = 'enemy';
+            // Случайный цвет врага
+            const colors = ['#e74c3c', '#8e44ad', '#27ae60', '#d35400'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            
+            enemy.innerHTML = `<div class="car-body" style="background:${randomColor}"><div class="car-lights"></div><div class="car-tail"></div></div>`;
+            
+            enemy.y = offsetY;
+            enemy.style.top = enemy.y + 'px';
+            enemy.style.left = Math.floor(Math.random() * 350) + 'px';
+            area.appendChild(enemy);
+            enemies.push(enemy);
+        }
+
+        function gamePlay() {
+            if (!gameState.isPlaying) return;
+            if (gameState.isPaused) {
+                animationId = requestAnimationFrame(gamePlay);
+                return;
+            }
+
+            const area = document.getElementById('gameArea');
+            const road = area.getBoundingClientRect();
+
+            // Движение линий
+            lines.forEach(line => {
+                line.y += gameState.speed;
+                if (line.y > 700) line.y -= 750;
+                line.style.top = line.y + 'px';
+            });
+
+            // Движение врагов и коллизии
+            enemies.forEach((enemy, index) => {
+                if (isCollide(player.element, enemy)) {
+                    gameOver();
+                    return;
+                }
+                enemy.y += gameState.speed;
+                if (enemy.y > 750) {
+                    enemy.y = -300;
+                    enemy.style.left = Math.floor(Math.random() * 350) + 'px';
+                    gameState.score += 10; // Очки за обгон
+                }
+                enemy.style.top = enemy.y + 'px';
+            });
+
+            // Управление
+            if (keys.ArrowLeft && player.x > 0) player.x -= 5;
+            if (keys.ArrowRight && player.x < (road.width - 50)) player.x += 5;
+            
+            player.element.style.left = player.x + 'px';
+
+            // Уровень сложности
+            if (gameState.score > gameState.level * 500) {
+                gameState.level++;
+                gameState.speed += 0.5;
+            }
+
+            gameState.score++;
+            updateHUD();
+            animationId = requestAnimationFrame(gamePlay);
+        }
+
+        function isCollide(a, b) {
+            const aRect = a.getBoundingClientRect();
+            const bRect = b.getBoundingClientRect();
+            // Уменьшаем хитбокс немного для честности
+            const padding = 10; 
+            return !(
+                (aRect.bottom - padding) < (bRect.top + padding) || 
+                (aRect.top + padding) > (bRect.bottom - padding) || 
+                (aRect.right - padding) < (bRect.left + padding) || 
+                (aRect.left + padding) > (bRect.right - padding)
+            );
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreVal').innerText = gameState.score;
+            document.getElementById('levelVal').innerText = gameState.level;
+            document.getElementById('moneyVal').innerText = gameState.money;
+        }
+
+        function gameOver() {
+            gameState.isPlaying = false;
+            const earned = Math.floor(gameState.score / 10); // 1 монета за 10 очков
+            gameState.money += earned;
+            saveProgress();
+            
+            document.getElementById('finalScore').innerText = gameState.score;
+            document.getElementById('earnedMoney').innerText = earned;
+            showScreen('gameOverScreen');
+        }
+
+        // --- ПАУЗА ---
+        function togglePause() {
+            if (!gameState.isPlaying) return;
+            gameState.isPaused = !gameState.isPaused;
+            const menu = document.getElementById('pauseMenu');
+            if (gameState.isPaused) {
+                menu.classList.remove('hidden');
+            } else {
+                menu.classList.add('hidden');
+            }
+        }
+    </script>
+    <script>
+  // Регистрация Service Worker для PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker зарегистрирован'))
+        .catch(err => console.log('Service Worker ошибка:', err));
+    });
+  }
+</script>
+</body>
+</html>
